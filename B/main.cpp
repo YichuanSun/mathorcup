@@ -173,7 +173,7 @@ void init_h()   {       //初始化所有进出货口的位置
 }
 
 //该部分出问题了
-bool is_end()   {           //判断是否货物都卸完了
+bool is_end()   {           //判断是否货物都卸完了。该部分错了
     int n1=0,n2=0;
     for (int i=1;i<=ma;i++)  {
         if (ihsa[i].sz!=0)  {
