@@ -54,12 +54,10 @@ car cs[MAX_N];          //小车集合
 inh ihsa[MAX_H],ihsb[MAX_H];            //进货口集合，分AB
 outh ohsa[MAX_H],ohsb[MAX_H];           //出货口集合，分AB
 bool block_car[MAX_N];                   //被堵塞的车的集合，包括在装卸货的车
-priority_queue<car,vector<car>,comp1> block_position_first;
-priority_queue<car,vector<car>,comp1> run_position_first;
-priority_queue<car,vector<car>,comp1> total_car_position_first;
+priority_queue<car,vector<car>,comp1> total_car_position_first; //所有车按位置从大到小的优先队列
 double anst=0;
 
-bool around_equal(double a,double b);
+bool around_equal(double a,double b);       //浮点数判等
 void init_car();        //初始化小车位置
 void init_h();          //初始化进出货口位置
 void programm();        //调度算法
@@ -81,20 +79,30 @@ int main()  {
     cout<<"请分别输入A->B，B->A的命令条数"<<endl;
     cin>>atob>>btoa;
     freopen("1.txt","ra",stdin);
-    for (int i=0;i<atob;i++)   {
+    for (int i=0;i<atob;i++)   {    //ok
         for (int j=1;j<=ma;j++) {
             cin>>t;
             qah[j].push(t);     //表示当前A侧第j进货口，要送至B侧t出货口
         }
     }
+//    for (int i=0;i<atob;i++)   {  //test
+//        for (int j=1;j<=ma;j++) {
+//            cout<<qah[j].front()<<' ';    //表示当前A侧第j进货口，要送至B侧t出货口
+//            qah[j].pop();
+//        }
+//        cout<<endl;
+//    }
     //cout<<btoa<<endl;
     freopen("2.txt","ra",stdin);
-    for (int i=0;i<btoa;i++)    {
+    for (int i=0;i<btoa;i++)    {       //ok
         for (int j=1;j<=mb;j++)  {
             cin>>t;
             vbh[j]+=t;          //表示当前B侧第j进货口，容量增加t(0或1)
         }
     }
+//    for (int j=1;j<=mb;j++)       //test
+//        cout<<vbh[j]<<' ';
+//    cout<<endl;
     init_car();                 //初始化小车位置
     init_h();                   //初始化进出货口位置
     programm();                 //调度算法
@@ -132,7 +140,7 @@ void init_car() {               //初始化所有车的信息
         double tp=0;
         for (int i=1;i<=N;i++)  {
             if (i&1)    {               //如果i为奇数，就放在A侧
-                tp=1.0*na*stepa+1.0*cnta*stepa+1.0*clca*ls;      //暂定的当前位置
+                tp=1.0*na*stepa+1.0*cnta*stepa-1.0*clca*ls;      //暂定的当前位置
                 cs[i].pos=moddouble(tp,100);
                 cnta++;
                 clca=cnta/ma;
@@ -141,11 +149,11 @@ void init_car() {               //初始化所有车的信息
                 if (1.0*clcb*ls<stepb)   {      //如果车长计算在内之后，小车在每个间隔内超过了间隔长度，则。。。
                                                 //我没做处理，计算后发现这样时根本不可能把小车排到弯道上去，因为弯道太短了
                                                 //所以此处我假设了小车在间隔内的总车长不会超过间隔长度
-                    tp=50.0+1.0*cntb*2*stepb+1.0*clcb*ls;
+                    tp=50.0+1.0*cntb*2*stepb-1.0*clcb*ls;
                     cs[i].pos=moddouble(tp,100);
                 }
                 else    {               //由于我假设了小车在间隔内的总车长不会超过间隔长度，所以此处两分支相同
-                    tp=50.0+1.0*cntb*2*stepb+1.0*clcb*ls;
+                    tp=50.0+1.0*cntb*2*stepb-1.0*clcb*ls;
                     cs[i].pos=moddouble(tp,100);
                 }
                 cntb++;
@@ -176,12 +184,12 @@ void init_h()   {       //初始化所有进出货口的位置
 bool is_end()   {           //判断是否货物都卸完了。该部分错了
     int n1=0,n2=0;
     for (int i=1;i<=ma;i++)  {
-        if (ihsa[i].sz!=0)  {
+        if (qah[i].size()!=0)  {
             n1=1;break;
         }
     }
     for (int i=1;i<=mb;i++) {
-        if (ihsb[i].sz!=0)  {
+        if (vbh[i]!=0)  {
             n2=1;break;
         }
     }
@@ -191,7 +199,7 @@ bool is_end()   {           //判断是否货物都卸完了。该部分错了
 
 void programm() {
     cout<<"OK"<<endl;
-    for (double t=0;(int)t<100000;t+=dt) {      //取时间粒度dt=0.01，依次遍历
+    for (double t=0;((int)t)<100000;t+=dt) {      //取时间粒度dt=0.01，依次遍历
         if (is_end())   {
             cout<<"OKK"<<endl;
             anst=t;
@@ -219,10 +227,6 @@ void car_block_or_not() {
         else block_car[i]=0;
     }
     for (int i=1;i<=N;i++)  {
-        if (block_car[i]==1)
-            block_position_first.push(cs[i]);
-        else
-            run_position_first.push(cs[i]);
         total_car_position_first.push(cs[i]);
     }
 }
@@ -245,7 +249,6 @@ void car_operate(car &t)  {
             for (int i=1;i<=ma;i++) {           //与A侧的所有进货口比较位置
                 if (around_equal(t.pos,ihsa[i].pos))    {
                     ihsa[i].busy=1;
-                    ihsa[i].sz--;
                     ihsa[i].tm=moddouble(ihsa[i].tm-dt,10);
                     t.str=i;        //str有个问题，没有判断是A侧进还是B侧进，我接下来得考虑到
                     t.en=-qah[i].front();qah[i].pop();      //出口在B侧，则设为负数
@@ -264,10 +267,10 @@ void car_operate(car &t)  {
         else if (t.pos>=50&&t.pos<=97)  {       //空载且碰到B侧进货口
             for (int i=1;i<=mb;i++) {
                 if (around_equal(t.pos,ihsb[i].pos))   {
-                    ihsb[i].sz--;
+                    vbh[i]--;
                     ihsb[i].tm=moddouble(ihsb[i].tm-dt,10);
                     t.str=-i;
-                    t.en;       //出口得动态判断
+                    //t.en;       //出口得动态判断
                     t.ste=1;
                     t.blockTime+=dt;
                     t.loadtime++;
